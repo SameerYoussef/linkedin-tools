@@ -1,4 +1,4 @@
-## LinkedInJobScraper > Android UI Automator script to scrape jobs from LinkedIn
+## LinkedInJobScraper.ky > Android UI Automator script to scrape jobs from LinkedIn
 
 * Requires an Android device or emulator
 * Requires installation of LinkedIn (and log yourself in) on above from:
@@ -11,3 +11,5 @@ Jobs will be saved to a file in `/sdcard/Download/jobs.txt`
 
 The file format is:
 `job_title|company|location|number_of_employees|language_of_text|full_job_description`
+
+Kudos to [pemistahl](https://github.com/pemistahl/lingua) for Lingua that does the langauge detection.

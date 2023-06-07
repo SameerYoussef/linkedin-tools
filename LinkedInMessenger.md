@@ -6,16 +6,17 @@ https://m.apkpure.com/linkedin-jobs-business-news/com.linkedin.android
 * Requires running `java -jar adbserver-desktop.jar` from:
 https://github.com/KasperskyLab/Kaspresso/blob/master/artifacts/adbserver-desktop.jar
 
-Place a file in /storage/emulated/0/Android/data/com.example.mykapplication/files/Download/data2.txt
+Place a file in `/storage/emulated/0/Android/data/com.example.mykapplication/files/Download/data2.txt`
 
 You must also make the file writeable:
 `adb push data2.txt /storage/emulated/0/Android/data/com.example.mykapplication/files/Download/data2.txt`
+
 `adb shell chmod a+rw /storage/emulated/0/Android/data/com.example.mykapplication/files/Download/data2.txt`
 
 File format:
 `name|message`
 
-'name' should be the exact full name of the contact
+`name` should be the exact full name of the contact
 
 After sending the message the file will be updated to:
 `name|message|SENT`
