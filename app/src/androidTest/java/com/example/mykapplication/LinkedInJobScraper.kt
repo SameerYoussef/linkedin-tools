@@ -2,6 +2,7 @@ package com.example.mykapplication
 
 import android.os.Environment
 import android.util.Log
+import androidx.core.util.Predicate
 import androidx.test.uiautomator.*
 
 import org.junit.Test
@@ -39,7 +40,7 @@ class LinkedInJobScraper : BaseTest() {
         LanguageDetectorBuilder.fromLanguages(ENGLISH, FRENCH, GERMAN, ITALIAN).build()
 
     @Test
-    fun findLinkedInJobs() {
+    fun findLinkedInJobs() = run {
         val jobsDesc = mutableSetOf<String>()
         val startFromCount = 0
 
@@ -57,9 +58,14 @@ class LinkedInJobScraper : BaseTest() {
                 val jobFilterSelectedBy = By.descContains("Jobs Filter selected")
                 d.wait(Until.findObject(jobFilterSelectedBy), 15_000)
 
-                val recycler = d.findObject(By.res("${id}careers_job_list_fragment_recycler_view"))
+                val recyclerBy = By.res("${id}careers_job_list_fragment_recycler_view")
+                val recycler = d.findObject(recyclerBy)
 
-                for (child in recycler.children.drop(1).dropLast(1)) {
+                var children = recycler.children.filterNot { child ->
+                    child.resourceName == "${id}premium_careers_jobs_upsell_layout"
+                }
+
+                for (child in children.drop(1).dropLast(1)) {
                     val jobDesc = cleanContentDesc(child)
 
                     if (!jobsDesc.contains(jobDesc) && count > startFromCount) {
@@ -70,8 +76,13 @@ class LinkedInJobScraper : BaseTest() {
 
                 performScroll(recycler)
 
+                children = d.findObject(recyclerBy).children.filterNot { child ->
+                    child.resourceName == "${id}premium_careers_jobs_upsell_layout"
+                }
+
                 while (true) {
-                    for (child in recycler.children.drop(1).dropLast(1)) {
+                    for (child in children.drop(1).dropLast(1)) {
+
                         val jobDesc = cleanContentDesc(child)
 
                         if (!jobsDesc.contains(jobDesc) && count <= startFromCount) {
@@ -81,7 +92,6 @@ class LinkedInJobScraper : BaseTest() {
                         else if (!jobsDesc.contains(jobDesc) && count > startFromCount) {
                             clickIntoJob(child)
                             jobsDesc.add(jobDesc)
-                            count++
 
                             if (jobsDesc.count() % 50 == 0) // restart app due to slowness
                                 continue@outerLoop
@@ -90,14 +100,14 @@ class LinkedInJobScraper : BaseTest() {
 
                     // if job search query appears then we've hit the end - end early
                     val seeMoreJobBy = By.res("${id}job_search_query_expansion_parent")
-                    if (recycler.children.last().findObject(seeMoreJobBy) != null)
+                    if (children.last().findObject(seeMoreJobBy) != null)
                         break@outerLoop
 
-                    val thirdToLastChild = cleanContentDesc(recycler.children.takeLast(3).first())
-                    val secToLastChild = cleanContentDesc(recycler.children.takeLast(2).first())
-                    val lastChild = cleanContentDesc(recycler.children.last())
+                    val thirdToLastChild = cleanContentDesc(children.takeLast(3).first())
+                    val secToLastChild = cleanContentDesc(children.takeLast(2).first())
+                    val lastChild = cleanContentDesc(children.last())
 
-                    val secondLastChild = recycler.children.takeLast(2).first()
+                    val secondLastChild = children.takeLast(2).first()
                     val startPoint = secondLastChild.visibleCenter
                     val endX = d.displayWidth / 2
 
@@ -108,9 +118,13 @@ class LinkedInJobScraper : BaseTest() {
                     d.drag(startPoint.x, startPoint.y, endX, endY, 100)
                     d.pressBack()
 
-                    val newThirdToLastChild = cleanContentDesc(recycler.children.takeLast(3).first())
-                    val newSecToLastChild = cleanContentDesc(recycler.children.takeLast(2).first())
-                    val newLastChild = cleanContentDesc(recycler.children.last())
+                    children = d.findObject(recyclerBy).children.filterNot { child ->
+                        child.resourceName == "${id}premium_careers_jobs_upsell_layout"
+                    }
+
+                    val newThirdToLastChild = cleanContentDesc(children.takeLast(3).first())
+                    val newSecToLastChild = cleanContentDesc(children.takeLast(2).first())
+                    val newLastChild = cleanContentDesc(children.last())
 
                     // Last result hit (in theory)
                     if (lastChild == newLastChild
