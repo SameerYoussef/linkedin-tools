@@ -2,7 +2,6 @@ package com.example.mykapplication
 
 import android.os.Environment
 import android.util.Log
-import androidx.core.util.Predicate
 import androidx.test.uiautomator.*
 
 import org.junit.Test
@@ -17,17 +16,7 @@ import com.github.pemistahl.lingua.api.Language.*
 
     Android UI Automator script to scrape jobs from LinkedIn
 
-    * Requires an Android device or emulator
-    * Requires installation of LinkedIn (and log yourself in) on above from:
-    https://m.apkpure.com/linkedin-jobs-business-news/com.linkedin.android
-     * Requires you to have a previous search performed
-    * Requires running `java -jar adbserver-desktop.jar` from:
-    https://github.com/KasperskyLab/Kaspresso/blob/master/artifacts/adbserver-desktop.jar
-
-    Jobs will be saved to a file in /sdcard/Download/jobs.txt
-
-    The file format is:
-    job_title|company|location|number_of_employees|language_of_text|full_job_description
+    See ./LinkedInJobScraper.md for more information
 
  */
 class LinkedInJobScraper : BaseTest() {
@@ -58,6 +47,7 @@ class LinkedInJobScraper : BaseTest() {
                 val jobFilterSelectedBy = By.descContains("Jobs Filter selected")
                 d.wait(Until.findObject(jobFilterSelectedBy), 15_000)
 
+                // START with first page results
                 val recyclerBy = By.res("${id}careers_job_list_fragment_recycler_view")
                 val recycler = d.findObject(recyclerBy)
 
@@ -74,13 +64,15 @@ class LinkedInJobScraper : BaseTest() {
                     }
                 }
 
+                // Scroll to 2nd page
                 performScroll(recycler)
 
-                children = d.findObject(recyclerBy).children.filterNot { child ->
-                    child.resourceName == "${id}premium_careers_jobs_upsell_layout"
-                }
-
+                // Process 2nd page results onwards
                 while (true) {
+                    children = d.findObject(recyclerBy).children.filterNot { child ->
+                        child.resourceName == "${id}premium_careers_jobs_upsell_layout"
+                    }
+
                     for (child in children.drop(1).dropLast(1)) {
 
                         val jobDesc = cleanContentDesc(child)
@@ -99,10 +91,10 @@ class LinkedInJobScraper : BaseTest() {
                     }
 
                     // if job search query appears then we've hit the end - end early
-                    val seeMoreJobBy = By.res("${id}job_search_query_expansion_parent")
-                    if (children.last().findObject(seeMoreJobBy) != null)
+                    if (d.findObject(recyclerBy).children.last().resourceName == "${id}job_search_query_expansion_parent")
                         break@outerLoop
 
+                    // collect info for check if we hit bottom
                     val thirdToLastChild = cleanContentDesc(children.takeLast(3).first())
                     val secToLastChild = cleanContentDesc(children.takeLast(2).first())
                     val lastChild = cleanContentDesc(children.last())
@@ -115,23 +107,27 @@ class LinkedInJobScraper : BaseTest() {
                     val endY =
                         (topBar.visibleBounds.bottom + secondLastChild.visibleBounds.height() / 1.6).toInt()
 
+                    // scroll down
                     d.drag(startPoint.x, startPoint.y, endX, endY, 100)
                     d.pressBack()
 
+                    // check if we bit the bottom
+
+                    // remove non-job cards
                     children = d.findObject(recyclerBy).children.filterNot { child ->
-                        child.resourceName == "${id}premium_careers_jobs_upsell_layout"
+                        child.resourceName == "${id}job_search_query_expansion_parent" ||
+                                child.resourceName == "${id}premium_careers_jobs_upsell_layout"
                     }
 
                     val newThirdToLastChild = cleanContentDesc(children.takeLast(3).first())
                     val newSecToLastChild = cleanContentDesc(children.takeLast(2).first())
                     val newLastChild = cleanContentDesc(children.last())
 
-                    // Last result hit (in theory)
+                    // Exit if bottom hit
                     if (lastChild == newLastChild
                         && secToLastChild == newSecToLastChild
                         && thirdToLastChild == newThirdToLastChild
                     ) break@outerLoop
-
                 }
             }
             catch (e: java.lang.Exception) {
